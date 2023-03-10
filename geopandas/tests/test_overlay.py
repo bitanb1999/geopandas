@@ -47,7 +47,7 @@ def dfs_index(request, dfs):
     if request.param == "int-index":
         df1.index = [1, 2]
         df2.index = [0, 2]
-    if request.param == "string-index":
+    elif request.param == "string-index":
         df1.index = ["row1", "row2"]
     return df1, df2
 
@@ -190,10 +190,7 @@ def test_overlay_nybb(how):
 
     # first, check that all bounds and areas are approx equal
     # this is a very rough check for multipolygon equality
-    if not _compat.PANDAS_GE_11:
-        kwargs = dict(check_less_precise=True)
-    else:
-        kwargs = {}
+    kwargs = {} if _compat.PANDAS_GE_11 else dict(check_less_precise=True)
     pd.testing.assert_series_equal(
         result.geometry.area, expected.geometry.area, **kwargs
     )
@@ -207,7 +204,7 @@ def test_overlay_nybb(how):
         expected.loc[9, "geometry"] = None
         result.loc[9, "geometry"] = None
 
-    if how == "union":
+    elif how == "union":
         expected.loc[24, "geometry"] = None
         result.loc[24, "geometry"] = None
 
@@ -510,7 +507,7 @@ def test_overlay_strict(how, keep_geom_type, geom_types):
         # so we sort the resultant dataframes to get a consistent order
         # independently of the spatial index implementation
         assert all(expected.columns == result.columns), "Column name mismatch"
-        cols = list(set(result.columns) - set(["geometry"]))
+        cols = list(set(result.columns) - {"geometry"})
         expected = expected.sort_values(cols, axis=0).reset_index(drop=True)
         result = result.sort_values(cols, axis=0).reset_index(drop=True)
 
@@ -752,7 +749,7 @@ def test_non_overlapping(how):
             },
             index=pd.Index([], dtype="object"),
         )
-    elif how == "union":
+    elif how == "union" or how != "identity" and how == "symmetric_difference":
         expected = GeoDataFrame(
             {
                 "col1": [1, np.nan],
@@ -766,14 +763,6 @@ def test_non_overlapping(how):
                 "col1": [1.0],
                 "col2": [np.nan],
                 "geometry": [p1],
-            }
-        )
-    elif how == "symmetric_difference":
-        expected = GeoDataFrame(
-            {
-                "col1": [1, np.nan],
-                "col2": [np.nan, 2],
-                "geometry": [p1, p2],
             }
         )
     elif how == "difference":

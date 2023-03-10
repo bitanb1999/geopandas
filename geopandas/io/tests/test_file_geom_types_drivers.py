@@ -96,7 +96,6 @@ def _expected_error_on(gdf, ogr_driver):
 
 # *****************************************
 # TEST CASES
-_geodataframes_to_write = []
 _expected_exceptions = {}
 _CRS = "epsg:4326"
 
@@ -105,8 +104,7 @@ _CRS = "epsg:4326"
 gdf = GeoDataFrame(
     {"a": [1, 2]}, crs=_CRS, geometry=[city_hall_entrance, city_hall_balcony]
 )
-_geodataframes_to_write.append(gdf)
-
+_geodataframes_to_write = [gdf]
 # ------------------
 # gdf with MultiPoints
 gdf = GeoDataFrame(
@@ -249,8 +247,7 @@ def ogr_driver(request):
 def test_to_file_roundtrip(tmpdir, geodataframe, ogr_driver):
     output_file = os.path.join(str(tmpdir), "output_file")
 
-    expected_error = _expected_error_on(geodataframe, ogr_driver)
-    if expected_error:
+    if expected_error := _expected_error_on(geodataframe, ogr_driver):
         with pytest.raises(RuntimeError, match="Failed to write record"):
             geodataframe.to_file(output_file, driver=ogr_driver)
     else:

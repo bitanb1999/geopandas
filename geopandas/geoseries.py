@@ -154,34 +154,32 @@ class GeoSeries(GeoPandasBase, Series):
             if not data.crs:
                 # make a copy to avoid setting CRS to passed GeometryArray
                 data = data.copy()
-            else:
-                if not data.crs == crs:
-                    raise ValueError(
-                        "CRS mismatch between CRS of the passed geometries "
-                        "and 'crs'. Use 'GeoSeries.set_crs(crs, "
-                        "allow_override=True)' to overwrite CRS or "
-                        "'GeoSeries.to_crs(crs)' to reproject geometries. "
-                    )
+            elif data.crs != crs:
+                raise ValueError(
+                    "CRS mismatch between CRS of the passed geometries "
+                    "and 'crs'. Use 'GeoSeries.set_crs(crs, "
+                    "allow_override=True)' to overwrite CRS or "
+                    "'GeoSeries.to_crs(crs)' to reproject geometries. "
+                )
 
         if isinstance(data, SingleBlockManager):
-            if isinstance(data.blocks[0].dtype, GeometryDtype):
-                if data.blocks[0].ndim == 2:
-                    # bug in pandas 0.23 where in certain indexing operations
-                    # (such as .loc) a 2D ExtensionBlock (still with 1D values
-                    # is created) which results in other failures
-                    # bug in pandas <= 0.25.0 when len(values) == 1
-                    #   (https://github.com/pandas-dev/pandas/issues/27785)
-                    from pandas.core.internals import ExtensionBlock
-
-                    values = data.blocks[0].values
-                    block = ExtensionBlock(values, slice(0, len(values), 1), ndim=1)
-                    data = SingleBlockManager([block], data.axes[0], fastpath=True)
-            else:
+            if not isinstance(data.blocks[0].dtype, GeometryDtype):
                 raise TypeError(
                     "Non geometry data passed to GeoSeries constructor, "
                     f"received data of dtype '{data.blocks[0].dtype}'"
                 )
 
+            if data.blocks[0].ndim == 2:
+                # bug in pandas 0.23 where in certain indexing operations
+                # (such as .loc) a 2D ExtensionBlock (still with 1D values
+                # is created) which results in other failures
+                # bug in pandas <= 0.25.0 when len(values) == 1
+                #   (https://github.com/pandas-dev/pandas/issues/27785)
+                from pandas.core.internals import ExtensionBlock
+
+                values = data.blocks[0].values
+                block = ExtensionBlock(values, slice(0, len(values), 1), ndim=1)
+                data = SingleBlockManager([block], data.axes[0], fastpath=True)
         if isinstance(data, BaseGeometry):
             # fix problem for scalar geometries passed, ensure the list of
             # scalars is of correct length if index is specified
@@ -486,14 +484,13 @@ class GeoSeries(GeoPandasBase, Series):
         2    POINT (-3.00000 1.50000)
         dtype: geometry
         """
-        if index is None:
-            if (
-                isinstance(x, Series)
-                and isinstance(y, Series)
-                and x.index.equals(y.index)
-                and (z is None or (isinstance(z, Series) and x.index.equals(z.index)))
-            ):  # check if we can reuse index
-                index = x.index
+        if index is None and (
+            isinstance(x, Series)
+            and isinstance(y, Series)
+            and x.index.equals(y.index)
+            and (z is None or (isinstance(z, Series) and x.index.equals(z.index)))
+        ):
+            index = x.index
         return cls(points_from_xy(x, y, z, crs=crs), index=index, crs=crs, **kwargs)
 
     @classmethod
@@ -623,9 +620,8 @@ class GeoSeries(GeoPandasBase, Series):
     @doc(pd.Series)
     def apply(self, func, convert_dtype=True, args=(), **kwargs):
         result = super().apply(func, convert_dtype=convert_dtype, args=args, **kwargs)
-        if isinstance(result, GeoSeries):
-            if self.crs is not None:
-                result.set_crs(self.crs, inplace=True)
+        if isinstance(result, GeoSeries) and self.crs is not None:
+            result.set_crs(self.crs, inplace=True)
         return result
 
     def isna(self):
@@ -1005,17 +1001,14 @@ class GeoSeries(GeoPandasBase, Series):
         else:
             raise ValueError("Must pass either crs or epsg.")
 
-        if not allow_override and self.crs is not None and not self.crs == crs:
+        if not allow_override and self.crs is not None and self.crs != crs:
             raise ValueError(
                 "The GeoSeries already has a CRS which is not equal to the passed "
                 "CRS. Specify 'allow_override=True' to allow replacing the existing "
                 "CRS without doing any transformation. If you actually want to "
                 "transform the geometries, use 'GeoSeries.to_crs' instead."
             )
-        if not inplace:
-            result = self.copy()
-        else:
-            result = self
+        result = self if inplace else self.copy()
         result.crs = crs
         return result
 

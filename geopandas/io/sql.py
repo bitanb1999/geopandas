@@ -220,11 +220,10 @@ def _get_geometry_type(gdf):
     if len(geom_types) == 1:
         if has_curve:
             target_geom_type = "LINESTRING"
+        elif geom_types[0] is None:
+            raise ValueError("No valid geometries in the data.")
         else:
-            if geom_types[0] is None:
-                raise ValueError("No valid geometries in the data.")
-            else:
-                target_geom_type = geom_types[0].upper()
+            target_geom_type = geom_types[0].upper()
     else:
         target_geom_type = "GEOMETRY"
 
@@ -302,13 +301,11 @@ def _psql_insert_copy(tbl, conn, keys, data_iter):
     writer.writerows(data_iter)
     s_buf.seek(0)
 
-    columns = ", ".join('"{}"'.format(k) for k in keys)
+    columns = ", ".join(f'"{k}"' for k in keys)
 
     dbapi_conn = conn.connection
     with dbapi_conn.cursor() as cur:
-        sql = 'COPY "{}"."{}" ({}) FROM STDIN WITH CSV'.format(
-            tbl.table.schema, tbl.table.name, columns
-        )
+        sql = f'COPY "{tbl.table.schema}"."{tbl.table.name}" ({columns}) FROM STDIN WITH CSV'
         cur.copy_expert(sql=sql, file=s_buf)
 
 
@@ -393,11 +390,7 @@ def _write_postgis(
     # Convert geometries to EWKB
     gdf = _convert_to_ewkb(gdf, geom_name, srid)
 
-    if schema is not None:
-        schema_name = schema
-    else:
-        schema_name = "public"
-
+    schema_name = schema if schema is not None else "public"
     if if_exists == "append":
         # Check that the geometry srid matches with the current GeoDataFrame
         with _get_conn(con) as connection:

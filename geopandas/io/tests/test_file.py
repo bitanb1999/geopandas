@@ -33,8 +33,7 @@ _CRS = "epsg:4326"
 @pytest.fixture
 def df_nybb():
     nybb_path = geopandas.datasets.get_path("nybb")
-    df = read_file(nybb_path)
-    return df
+    return read_file(nybb_path)
 
 
 @pytest.fixture
@@ -53,14 +52,13 @@ def file_path():
 def df_points():
     N = 10
     crs = _CRS
-    df = GeoDataFrame(
+    return GeoDataFrame(
         [
             {"geometry": Point(x, y), "value1": x + y, "value2": x * y}
             for x, y in zip(range(N), range(N))
         ],
         crs=crs,
     )
-    return df
 
 
 # -----------------------------------------------------------------------------
@@ -169,10 +167,7 @@ def test_to_file_datetime(tmpdir, driver, ext, time):
     df = GeoDataFrame(
         {"a": [1, 2], "b": [time, time]}, geometry=[point, point], crs=4326
     )
-    if FIONA_GE_1814:
-        fiona_precision_limit = "ms"
-    else:
-        fiona_precision_limit = "s"
+    fiona_precision_limit = "ms" if FIONA_GE_1814 else "s"
     df["b"] = df["b"].dt.round(freq=fiona_precision_limit)
 
     df.to_file(tempfilename, driver=driver)
@@ -234,10 +229,10 @@ def test_to_file_types(tmpdir, df_points):
         np.uint64,
     ]
     geometry = df_points.geometry
-    data = dict(
-        (str(i), np.arange(len(geometry), dtype=dtype))
+    data = {
+        str(i): np.arange(len(geometry), dtype=dtype)
         for i, dtype in enumerate(int_types)
-    )
+    }
     df = GeoDataFrame(data, geometry=geometry)
     df.to_file(tempfilename)
 
@@ -313,7 +308,7 @@ def test_append_file(tmpdir, df_nybb, df_null, driver, ext):
     from fiona import supported_drivers
 
     tempfilename = os.path.join(str(tmpdir), "boros" + ext)
-    driver = driver if driver else _detect_driver(tempfilename)
+    driver = driver or _detect_driver(tempfilename)
     if "a" not in supported_drivers[driver]:
         return None
 
@@ -709,12 +704,7 @@ def test_write_index_to_file(tmpdir, df_points, driver, ext):
         other_cols = list(df.columns)
         other_cols.remove("geometry")
 
-        if driver == "ESRI Shapefile":
-            # ESRI Shapefile will add FID if no other columns exist
-            driver_col = ["FID"]
-        else:
-            driver_col = []
-
+        driver_col = ["FID"] if driver == "ESRI Shapefile" else []
         if index_is_used:
             index_cols = list(df.index.names)
         else:
@@ -726,16 +716,13 @@ def test_write_index_to_file(tmpdir, df_points, driver, ext):
         elif len(index_cols) > 1 and not all(index_cols):
             for level, index_col in enumerate(index_cols):
                 if index_col is None:
-                    index_cols[level] = "level_" + str(level)
+                    index_cols[level] = f"level_{str(level)}"
 
         # check GeoDataFrame with default index=None to autodetect
         tempfilename = next(fngen)
         df.to_file(tempfilename, driver=driver, index=None)
         df_check = read_file(tempfilename)
-        if len(other_cols) == 0:
-            expected_cols = driver_col[:]
-        else:
-            expected_cols = []
+        expected_cols = [] if other_cols else driver_col[:]
         if index_is_used:
             expected_cols += index_cols
         expected_cols += other_cols + ["geometry"]
@@ -767,10 +754,11 @@ def test_write_index_to_file(tmpdir, df_points, driver, ext):
         tempfilename = next(fngen)
         df.to_file(tempfilename, driver=driver, index=False)
         df_check = read_file(tempfilename)
-        if len(other_cols) == 0:
-            expected_cols = driver_col + ["geometry"]
-        else:
-            expected_cols = other_cols + ["geometry"]
+        expected_cols = (
+            other_cols + ["geometry"]
+            if other_cols
+            else driver_col + ["geometry"]
+        )
         assert list(df_check.columns) == expected_cols
 
         # similar check on GeoSeries with index=False

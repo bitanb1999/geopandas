@@ -29,8 +29,7 @@ class TestExplore:
 
     def _fetch_map_string(self, m):
         out = m._parent.render()
-        out_str = "".join(out.split())
-        return out_str
+        return "".join(out.split())
 
     def test_simple_pass(self):
         """Make sure default pass"""
@@ -757,10 +756,7 @@ class TestExplore:
         # Using custom function colormap
         def my_color_function(field):
             """Maps low values to green and high values to red."""
-            if field > 100000000:
-                return "#ff0000"
-            else:
-                return "#008000"
+            return "#ff0000" if field > 100000000 else "#008000"
 
         m = self.world.explore("pop_est", cmap=my_color_function, legend=False)
 

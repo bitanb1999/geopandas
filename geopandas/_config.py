@@ -17,25 +17,18 @@ class Options(object):
 
     def __init__(self, options):
         super().__setattr__("_options", options)
-        # populate with default values
-        config = {}
-        for key, option in options.items():
-            config[key] = option.default_value
-
+        config = {key: option.default_value for key, option in options.items()}
         super().__setattr__("_config", config)
 
     def __setattr__(self, key, value):
-        # you can't set new keys
-        if key in self._config:
-            option = self._options[key]
-            if option.validator:
-                option.validator(value)
-            self._config[key] = value
-            if option.callback:
-                option.callback(key, value)
-        else:
-            msg = "You can only set the value of existing options"
-            raise AttributeError(msg)
+        if key not in self._config:
+            raise AttributeError("You can only set the value of existing options")
+        option = self._options[key]
+        if option.validator:
+            option.validator(value)
+        self._config[key] = value
+        if option.callback:
+            option.callback(key, value)
 
     def __getattr__(self, key):
         try:
@@ -63,13 +56,14 @@ class Options(object):
             description += doc_text + "\n"
         space = "\n  "
         description = description.replace("\n", space)
-        return "{}({}{})".format(cls, space, description)
+        return f"{cls}({space}{description})"
 
 
 def _validate_display_precision(value):
-    if value is not None:
-        if not isinstance(value, int) or not (0 <= value <= 16):
-            raise ValueError("Invalid value, needs to be an integer [0-16]")
+    if value is not None and (
+        not isinstance(value, int) or not (0 <= value <= 16)
+    ):
+        raise ValueError("Invalid value, needs to be an integer [0-16]")
 
 
 display_precision = Option(

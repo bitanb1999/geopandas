@@ -52,8 +52,8 @@ def platform_name():
     return "_".join(
         [
             str(geopandas.__version__),
-            "pd-" + str(pd.__version__),
-            "py-" + str(platform.python_version()),
+            f"pd-{str(pd.__version__)}",
+            f"py-{str(platform.python_version())}",
             str(platform.machine()),
             str(platform.system().lower()),
         ]
@@ -66,16 +66,14 @@ def write_legacy_pickles(output_dir):
         "and python version"
     )
     print("geopandas version: {}").format(geopandas.__version__)
-    print("   output dir    : {}".format(output_dir))
+    print(f"   output dir    : {output_dir}")
     print("   storage format: pickle")
 
-    pth = "{}.pickle".format(platform_name())
+    pth = f"{platform_name()}.pickle"
 
-    fh = open(os.path.join(output_dir, pth), "wb")
-    pickle.dump(create_pickle_data(), fh, pickle.DEFAULT_PROTOCOL)
-    fh.close()
-
-    print("created pickle file: {}".format(pth))
+    with open(os.path.join(output_dir, pth), "wb") as fh:
+        pickle.dump(create_pickle_data(), fh, pickle.DEFAULT_PROTOCOL)
+    print(f"created pickle file: {pth}")
 
 
 def main():
@@ -85,10 +83,10 @@ def main():
             "storage_files.py <output_dir> <storage_type> "
         )
 
-    output_dir = str(sys.argv[1])
     storage_type = str(sys.argv[2])
 
     if storage_type == "pickle":
+        output_dir = str(sys.argv[1])
         write_legacy_pickles(output_dir=output_dir)
     else:
         exit("storage_type must be one of {'pickle'}")

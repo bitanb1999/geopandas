@@ -308,7 +308,7 @@ def _arrow_to_geopandas(table):
 
     # Missing geometry likely indicates a subset of columns was read;
     # promote the first available geometry to the primary geometry.
-    if len(geometry_columns) and geometry not in geometry_columns:
+    if geometry not in geometry_columns:
         geometry = geometry_columns[0]
 
         # if there are multiple non-primary geometry columns, raise a warning
@@ -357,7 +357,7 @@ def _get_filesystem_path(path, filesystem=None, storage_options=None):
 
     if filesystem is None and storage_options:
         raise ValueError(
-            "Cannot provide 'storage_options' with non-fsspec path '{}'".format(path)
+            f"Cannot provide 'storage_options' with non-fsspec path '{path}'"
         )
 
     return filesystem, path

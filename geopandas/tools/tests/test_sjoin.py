@@ -44,13 +44,13 @@ def dfs(request):
     df1 = GeoDataFrame({"geometry": polys1, "df1": [0, 1, 2]})
     df2 = GeoDataFrame({"geometry": polys2, "df2": [3, 4, 5]})
 
-    if request.param == "string-index":
-        df1.index = ["a", "b", "c"]
-        df2.index = ["d", "e", "f"]
-
     if request.param == "named-index":
         df1.index.name = "df1_ix"
         df2.index.name = "df2_ix"
+
+    elif request.param == "string-index":
+        df1.index = ["a", "b", "c"]
+        df2.index = ["d", "e", "f"]
 
     if request.param == "multi-index":
         i1 = ["a", "b", "c"]
@@ -66,9 +66,6 @@ def dfs(request):
         df1.index.names = ["df1_ix1", "df1_ix2"]
         df2.index.names = ["df2_ix1", "df2_ix2"]
 
-    # construction expected frames
-    expected = {}
-
     part1 = df1.copy().reset_index().rename(columns={"index": "index_left"})
     part2 = (
         df2.copy()
@@ -79,8 +76,7 @@ def dfs(request):
     part1["_merge"] = [0, 1, 2]
     part2["_merge"] = [0, 0, 1, 3]
     exp = pd.merge(part1, part2, on="_merge", how="outer")
-    expected["intersects"] = exp.drop("_merge", axis=1).copy()
-
+    expected = {"intersects": exp.drop("_merge", axis=1).copy()}
     part1 = df1.copy().reset_index().rename(columns={"index": "index_left"})
     part2 = df2.copy().reset_index().rename(columns={"index": "index_right"})
     part1["_merge"] = [0, 1, 2]
@@ -112,7 +108,7 @@ class TestSpatialJoin:
         left = GeoDataFrame({"col": [1], "geometry": [Point(0, 0)]})
         right = GeoDataFrame({"col": [1], "geometry": [Point(0, 0)]})
         joined = sjoin(left, right, how=how, lsuffix=lsuffix, rsuffix=rsuffix)
-        assert set(joined.columns) == expected_cols | set(("geometry",))
+        assert set(joined.columns) == expected_cols | {"geometry"}
 
     @pytest.mark.parametrize("dfs", ["default-index", "string-index"], indirect=True)
     def test_crs_mismatch(self, dfs):

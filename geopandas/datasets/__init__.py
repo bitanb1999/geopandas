@@ -26,11 +26,13 @@ naturalearth_lowres/naturalearth_lowres.shp'
 
     """
     if dataset in _available_dir:
-        return os.path.abspath(os.path.join(_module_path, dataset, dataset + ".shp"))
+        return os.path.abspath(os.path.join(_module_path, dataset, f"{dataset}.shp"))
     elif dataset in _available_zip:
         fpath = os.path.abspath(os.path.join(_module_path, _available_zip[dataset]))
-        return "zip://" + fpath
+        return f"zip://{fpath}"
     else:
-        msg = "The dataset '{data}' is not available. ".format(data=dataset)
-        msg += "Available datasets are {}".format(", ".join(available))
+        msg = (
+            "The dataset '{data}' is not available. ".format(data=dataset)
+            + f'Available datasets are {", ".join(available)}'
+        )
         raise ValueError(msg)

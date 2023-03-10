@@ -77,14 +77,13 @@ def set_use_pygeos(val=None):
 
     if val is not None:
         USE_PYGEOS = bool(val)
-    else:
-        if USE_PYGEOS is None:
+    elif USE_PYGEOS is None:
 
-            USE_PYGEOS = HAS_PYGEOS
+        USE_PYGEOS = HAS_PYGEOS
 
-            env_use_pygeos = os.getenv("USE_PYGEOS", None)
-            if env_use_pygeos is not None:
-                USE_PYGEOS = bool(int(env_use_pygeos))
+        env_use_pygeos = os.getenv("USE_PYGEOS", None)
+        if env_use_pygeos is not None:
+            USE_PYGEOS = bool(int(env_use_pygeos))
 
     # validate the pygeos version
     if USE_PYGEOS:
@@ -109,11 +108,7 @@ def set_use_pygeos(val=None):
             # pygeos has something like: "3.6.2-CAPI-1.10.2"
             if not shapely_geos_version.startswith(geos_capi_version_string):
                 warnings.warn(
-                    "The Shapely GEOS version ({}) is incompatible with the GEOS "
-                    "version PyGEOS was compiled with ({}). Conversions between both "
-                    "will be slow.".format(
-                        shapely_geos_version, geos_capi_version_string
-                    )
+                    f"The Shapely GEOS version ({shapely_geos_version}) is incompatible with the GEOS version PyGEOS was compiled with ({geos_capi_version_string}). Conversions between both will be slow."
                 )
                 PYGEOS_SHAPELY_COMPAT = False
             else:

@@ -16,11 +16,7 @@ def is_geometry_type(data):
 
     Does not include object array of shapely scalars.
     """
-    if isinstance(getattr(data, "dtype", None), GeometryDtype):
-        # GeometryArray, GeoSeries and Series[GeometryArray]
-        return True
-    else:
-        return False
+    return isinstance(getattr(data, "dtype", None), GeometryDtype)
 
 
 def _delegate_binary_method(op, this, other, align, *args, **kwargs):
@@ -64,12 +60,11 @@ def _delegate_property(op, this):
     # type: (str, GeoSeries) -> GeoSeries/Series
     a_this = GeometryArray(this.geometry.values)
     data = getattr(a_this, op)
-    if isinstance(data, GeometryArray):
-        from .geoseries import GeoSeries
-
-        return GeoSeries(data.data, index=this.index, crs=this.crs)
-    else:
+    if not isinstance(data, GeometryArray):
         return Series(data, index=this.index)
+    from .geoseries import GeoSeries
+
+    return GeoSeries(data.data, index=this.index, crs=this.crs)
 
 
 def _delegate_geo_method(op, this, *args, **kwargs):
@@ -3364,9 +3359,11 @@ GeometryCollection
         """
         # we override this because pandas is using `self._constructor` in the
         # isinstance check (https://github.com/geopandas/geopandas/issues/1420)
-        if not isinstance(other, type(self)):
-            return False
-        return self._data.equals(other._data)
+        return (
+            self._data.equals(other._data)
+            if isinstance(other, type(self))
+            else False
+        )
 
 
 class _CoordinateIndexer(object):
