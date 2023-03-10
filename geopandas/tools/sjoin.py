@@ -123,9 +123,7 @@ stria    AUT    416600.0
 
     indices = _geom_predicate_query(left_df, right_df, predicate)
 
-    joined = _frame_join(indices, left_df, right_df, how, lsuffix, rsuffix)
-
-    return joined
+    return _frame_join(indices, left_df, right_df, how, lsuffix, rsuffix)
 
 
 def _basic_checks(left_df, right_df, how, lsuffix, rsuffix):
@@ -147,26 +145,20 @@ def _basic_checks(left_df, right_df, how, lsuffix, rsuffix):
         right index suffix
     """
     if not isinstance(left_df, GeoDataFrame):
-        raise ValueError(
-            "'left_df' should be GeoDataFrame, got {}".format(type(left_df))
-        )
+        raise ValueError(f"'left_df' should be GeoDataFrame, got {type(left_df)}")
 
     if not isinstance(right_df, GeoDataFrame):
-        raise ValueError(
-            "'right_df' should be GeoDataFrame, got {}".format(type(right_df))
-        )
+        raise ValueError(f"'right_df' should be GeoDataFrame, got {type(right_df)}")
 
     allowed_hows = ["left", "right", "inner"]
     if how not in allowed_hows:
-        raise ValueError(
-            '`how` was "{}" but is expected to be in {}'.format(how, allowed_hows)
-        )
+        raise ValueError(f'`how` was "{how}" but is expected to be in {allowed_hows}')
 
     if not _check_crs(left_df, right_df):
         _crs_mismatch_warn(left_df, right_df, stacklevel=4)
 
-    index_left = "index_{}".format(lsuffix)
-    index_right = "index_{}".format(rsuffix)
+    index_left = f"index_{lsuffix}"
+    index_right = f"index_{rsuffix}"
 
     # due to GH 352
     if any(left_df.columns.isin([index_left, index_right])) or any(
@@ -263,28 +255,28 @@ def _frame_join(join_df, left_df, right_df, how, lsuffix, rsuffix):
     # index in geopandas may be any arbitrary dtype. so reset both indices now
     # and store references to the original indices, to be reaffixed later.
     # GH 352
-    index_left = "index_{}".format(lsuffix)
+    index_left = f"index_{lsuffix}"
     left_df = left_df.copy(deep=True)
     try:
         left_index_name = left_df.index.name
         left_df.index = left_df.index.rename(index_left)
     except TypeError:
         index_left = [
-            "index_{}".format(lsuffix + str(pos))
+            f"index_{lsuffix + str(pos)}"
             for pos, ix in enumerate(left_df.index.names)
         ]
         left_index_name = left_df.index.names
         left_df.index = left_df.index.rename(index_left)
     left_df = left_df.reset_index()
 
-    index_right = "index_{}".format(rsuffix)
+    index_right = f"index_{rsuffix}"
     right_df = right_df.copy(deep=True)
     try:
         right_index_name = right_df.index.name
         right_df.index = right_df.index.rename(index_right)
     except TypeError:
         index_right = [
-            "index_{}".format(rsuffix + str(pos))
+            f"index_{rsuffix + str(pos)}"
             for pos, ix in enumerate(right_df.index.names)
         ]
         right_index_name = right_df.index.names
@@ -300,7 +292,7 @@ def _frame_join(join_df, left_df, right_df, how, lsuffix, rsuffix):
                 right_df.drop(right_df.geometry.name, axis=1),
                 left_on="_key_right",
                 right_index=True,
-                suffixes=("_{}".format(lsuffix), "_{}".format(rsuffix)),
+                suffixes=(f"_{lsuffix}", f"_{rsuffix}"),
             )
             .set_index(index_left)
             .drop(["_key_right"], axis=1)
@@ -313,13 +305,15 @@ def _frame_join(join_df, left_df, right_df, how, lsuffix, rsuffix):
     elif how == "left":
         join_df = join_df.set_index("_key_left")
         joined = (
-            left_df.merge(join_df, left_index=True, right_index=True, how="left")
+            left_df.merge(
+                join_df, left_index=True, right_index=True, how="left"
+            )
             .merge(
                 right_df.drop(right_df.geometry.name, axis=1),
                 how="left",
                 left_on="_key_right",
                 right_index=True,
-                suffixes=("_{}".format(lsuffix), "_{}".format(rsuffix)),
+                suffixes=(f"_{lsuffix}", f"_{rsuffix}"),
             )
             .set_index(index_left)
             .drop(["_key_right"], axis=1)
@@ -334,12 +328,15 @@ def _frame_join(join_df, left_df, right_df, how, lsuffix, rsuffix):
             left_df.drop(left_df.geometry.name, axis=1)
             .merge(
                 join_df.merge(
-                    right_df, left_on="_key_right", right_index=True, how="right"
+                    right_df,
+                    left_on="_key_right",
+                    right_index=True,
+                    how="right",
                 ),
                 left_index=True,
                 right_on="_key_left",
                 how="right",
-                suffixes=("_{}".format(lsuffix), "_{}".format(rsuffix)),
+                suffixes=(f"_{lsuffix}", f"_{rsuffix}"),
             )
             .set_index(index_right)
             .drop(["_key_left", "_key_right"], axis=1)
@@ -393,15 +390,14 @@ def _nearest_query(
                 distances = distances[sort_order]
         else:
             l_idx, r_idx = input_idx, tree_idx
-        join_df = pd.DataFrame(
+        return pd.DataFrame(
             {"_key_left": l_idx, "_key_right": r_idx, "distances": distances}
         )
     else:
         # when sindex is empty / has no valid geometries
-        join_df = pd.DataFrame(
+        return pd.DataFrame(
             columns=["_key_left", "_key_right", "distances"], dtype=float
         )
-    return join_df
 
 
 def sjoin_nearest(

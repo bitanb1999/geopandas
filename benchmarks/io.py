@@ -66,7 +66,7 @@ class Bench:
         )
 
         self.tmpdir = tempfile.mkdtemp()
-        self.filename = os.path.join(self.tmpdir, "frame" + self.ext)
+        self.filename = os.path.join(self.tmpdir, f"frame{self.ext}")
         self.writer(self.df, self.filename)
 
     def teardown(self, file_format):
@@ -80,7 +80,7 @@ class BenchFrame(Bench):
 
     def time_write(self, file_format):
         with tempfile.TemporaryDirectory() as tmpdir:
-            out_filename = os.path.join(tmpdir, "frame" + self.ext)
+            out_filename = os.path.join(tmpdir, f"frame{self.ext}")
             self.writer(self.df, out_filename)
 
     def time_read(self, file_format):
@@ -94,12 +94,12 @@ class BenchSeries(Bench):
 
     def setup(self, file_format):
         super().setup(file_format)
-        self.filename_series = os.path.join(self.tmpdir, "series" + self.ext)
+        self.filename_series = os.path.join(self.tmpdir, f"series{self.ext}")
         self.writer(self.points, self.filename_series)
 
     def time_write_series(self, file_format):
         with tempfile.TemporaryDirectory() as tmpdir:
-            out_filename = os.path.join(tmpdir, "series" + self.ext)
+            out_filename = os.path.join(tmpdir, f"series{self.ext}")
             self.writer(self.points, out_filename)
 
     def time_read_series(self, file_format):

@@ -58,7 +58,7 @@ class TestSeriesSindex:
         hits = s.sindex.intersection((-1, -1, 1, 1))
         assert len(list(hits)) == 1
         hits = s.sindex.intersection((-2, -2, -1, -1))
-        assert len(list(hits)) == 0
+        assert not list(hits)
 
     def test_empty_point(self):
         """Tests that a single empty Point results in an empty tree."""
@@ -447,10 +447,10 @@ class TestPygeosInterface:
         except AssertionError as e:
             if sort is False:
                 pytest.xfail(
-                    "rtree results are known to be unordered, see "
-                    "https://github.com/geopandas/geopandas/issues/1337\n"
-                    "Expected:\n {}\n".format(expected)
-                    + "Got:\n {}\n".format(res.tolist())
+                    (
+                        f"rtree results are known to be unordered, see https://github.com/geopandas/geopandas/issues/1337\nExpected:\n {expected}\n"
+                        + f"Got:\n {res.tolist()}\n"
+                    )
                 )
             raise e
 
@@ -689,10 +689,10 @@ class TestPygeosInterface:
         except AssertionError as e:
             if sort is False:
                 pytest.xfail(
-                    "rtree results are known to be unordered, see "
-                    "https://github.com/geopandas/geopandas/issues/1337\n"
-                    "Expected:\n {}\n".format(expected)
-                    + "Got:\n {}\n".format(res.tolist())
+                    (
+                        f"rtree results are known to be unordered, see https://github.com/geopandas/geopandas/issues/1337\nExpected:\n {expected}\n"
+                        + f"Got:\n {res.tolist()}\n"
+                    )
                 )
             raise e
 

@@ -286,8 +286,8 @@ def _plot_point_collection(
     geoms, multiindex = _flatten_multi_geoms(geoms)
     # values are expanded below as kwargs["c"]
 
-    x = [p.x if not p.is_empty else None for p in geoms]
-    y = [p.y if not p.is_empty else None for p in geoms]
+    x = [None if p.is_empty else p.x for p in geoms]
+    y = [None if p.is_empty else p.y for p in geoms]
 
     # matplotlib 1.4 does not support c=None, and < 2.0 does not support s=None
     if values is not None:
@@ -302,12 +302,11 @@ def _plot_point_collection(
         kwargs["marker"] = marker
     _expand_kwargs(kwargs, multiindex)
 
-    if "norm" not in kwargs:
-        collection = ax.scatter(x, y, vmin=vmin, vmax=vmax, cmap=cmap, **kwargs)
-    else:
-        collection = ax.scatter(x, y, cmap=cmap, **kwargs)
-
-    return collection
+    return (
+        ax.scatter(x, y, vmin=vmin, vmax=vmax, cmap=cmap, **kwargs)
+        if "norm" not in kwargs
+        else ax.scatter(x, y, cmap=cmap, **kwargs)
+    )
 
 
 plot_point_collection = deprecated(_plot_point_collection)

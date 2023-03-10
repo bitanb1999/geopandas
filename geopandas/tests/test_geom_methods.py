@@ -136,11 +136,7 @@ class TestGeomMethods:
             def fcmp(a, b):
                 assert geom_equals(a, b)
 
-        if isinstance(b, GeoPandasBase):
-            right_df = True
-        else:
-            right_df = False
-
+        right_df = isinstance(b, GeoPandasBase)
         self._binary_op_test(op, expected, a, b, fcmp, True, right_df, *args, **kwargs)
 
     def _test_binary_real(self, op, expected, a, b, *args, **kwargs):
@@ -161,11 +157,7 @@ class TestGeomMethods:
             def fcmp(a, b):
                 assert geom_equals(a, b)
 
-        if isinstance(b, GeoPandasBase):
-            right_df = True
-        else:
-            right_df = False
-
+        right_df = isinstance(b, GeoPandasBase)
         self._binary_op_test(op, expected, a, b, fcmp, False, right_df)
 
     def _binary_op_test(
@@ -664,8 +656,8 @@ class TestGeomMethods:
     def test_centroid(self):
         polygon = Polygon([(-1, -1), (1, -1), (1, 1), (-1, 1)])
         point = Point(0, 0)
-        polygons = GeoSeries([polygon for i in range(3)])
-        points = GeoSeries([point for i in range(3)])
+        polygons = GeoSeries([polygon for _ in range(3)])
+        points = GeoSeries([point for _ in range(3)])
         assert_geoseries_equal(polygons.centroid, points)
 
     def test_centroid_crs_warn(self):
@@ -674,7 +666,7 @@ class TestGeomMethods:
 
     def test_convex_hull(self):
         # the convex hull of a square should be the same as the square
-        squares = GeoSeries([self.sq for i in range(3)])
+        squares = GeoSeries([self.sq for _ in range(3)])
         assert_geoseries_equal(squares, squares.convex_hull)
 
     def test_exterior(self):

@@ -16,10 +16,7 @@ def _get_throttle_time(provider):
     import geopy.geocoders
 
     # https://operations.osmfoundation.org/policies/nominatim/
-    if provider == geopy.geocoders.Nominatim:
-        return 1
-    else:
-        return 0
+    return 1 if provider == geopy.geocoders.Nominatim else 0
 
 
 def geocode(strings, provider=None, **kwargs):
@@ -126,9 +123,8 @@ def _query(data, forward, provider, throttle_time, **kwargs):
     if forward:
         if not isinstance(data, pd.Series):
             data = pd.Series(data)
-    else:
-        if not isinstance(data, geopandas.GeoSeries):
-            data = geopandas.GeoSeries(data)
+    elif not isinstance(data, geopandas.GeoSeries):
+        data = geopandas.GeoSeries(data)
 
     if isinstance(provider, str):
         provider = get_geocoder_for_service(provider)
@@ -145,8 +141,7 @@ def _query(data, forward, provider, throttle_time, **kwargs):
             results[i] = (None, None)
         time.sleep(throttle_time)
 
-    df = _prepare_geocode_result(results)
-    return df
+    return _prepare_geocode_result(results)
 
 
 def _prepare_geocode_result(results):
@@ -171,15 +166,9 @@ def _prepare_geocode_result(results):
             address, loc = s
 
             # loc is lat, lon and we want lon, lat
-            if loc is None:
-                p = Point()
-            else:
-                p = Point(loc[1], loc[0])
-
+            p = Point() if loc is None else Point(loc[1], loc[0])
         d["geometry"].append(p)
         d["address"].append(address)
         index.append(i)
 
-    df = geopandas.GeoDataFrame(d, index=index, crs="EPSG:4326")
-
-    return df
+    return geopandas.GeoDataFrame(d, index=index, crs="EPSG:4326")

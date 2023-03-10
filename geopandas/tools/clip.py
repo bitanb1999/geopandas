@@ -106,28 +106,29 @@ def clip(gdf, mask, keep_geom_type=False):
     (12, 2)
     """
     if not isinstance(gdf, (GeoDataFrame, GeoSeries)):
-        raise TypeError(
-            "'gdf' should be GeoDataFrame or GeoSeries, got {}".format(type(gdf))
-        )
+        raise TypeError(f"'gdf' should be GeoDataFrame or GeoSeries, got {type(gdf)}")
 
     if not isinstance(mask, (GeoDataFrame, GeoSeries, Polygon, MultiPolygon)):
         raise TypeError(
-            "'mask' should be GeoDataFrame, GeoSeries or"
-            "(Multi)Polygon, got {}".format(type(mask))
+            f"'mask' should be GeoDataFrame, GeoSeries or(Multi)Polygon, got {type(mask)}"
         )
 
-    if isinstance(mask, (GeoDataFrame, GeoSeries)):
-        if not _check_crs(gdf, mask):
-            _crs_mismatch_warn(gdf, mask, stacklevel=3)
+    if isinstance(mask, (GeoDataFrame, GeoSeries)) and not _check_crs(
+        gdf, mask
+    ):
+        _crs_mismatch_warn(gdf, mask, stacklevel=3)
 
-    if isinstance(mask, (GeoDataFrame, GeoSeries)):
-        box_mask = mask.total_bounds
-    else:
-        box_mask = mask.bounds
     box_gdf = gdf.total_bounds
-    if not (
-        ((box_mask[0] <= box_gdf[2]) and (box_gdf[0] <= box_mask[2]))
-        and ((box_mask[1] <= box_gdf[3]) and (box_gdf[1] <= box_mask[3]))
+    box_mask = (
+        mask.total_bounds
+        if isinstance(mask, (GeoDataFrame, GeoSeries))
+        else mask.bounds
+    )
+    if (
+        box_mask[0] > box_gdf[2]
+        or box_gdf[0] > box_mask[2]
+        or box_mask[1] > box_gdf[3]
+        or box_gdf[1] > box_mask[3]
     ):
         return gdf.iloc[:0]
 

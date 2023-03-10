@@ -391,9 +391,7 @@ if compat.HAS_RTREE:
         @property
         @doc(BaseSpatialIndex.is_empty)
         def is_empty(self):
-            if len(self.leaves()) > 1:
-                return False
-            return self.size < 1
+            return False if len(self.leaves()) > 1 else self.size < 1
 
     class RTreeIndex(rtree.index.Index):
         """A simple wrapper around rtree's RTree Index
@@ -446,9 +444,7 @@ if compat.HAS_RTREE:
             # handle invalid predicates
             if predicate not in self.valid_query_predicates:
                 raise ValueError(
-                    "Got `predicate` = `{}`, `predicate` must be one of {}".format(
-                        predicate, self.valid_query_predicates
-                    )
+                    f"Got `predicate` = `{predicate}`, `predicate` must be one of {self.valid_query_predicates}"
                 )
 
             # handle empty / invalid geometries
@@ -458,10 +454,7 @@ if compat.HAS_RTREE:
 
             if not isinstance(geometry, BaseGeometry):
                 raise TypeError(
-                    "Got `geometry` of type `{}`, `geometry` must be ".format(
-                        type(geometry)
-                    )
-                    + "a shapely geometry."
+                    f"Got `geometry` of type `{type(geometry)}`, `geometry` must be a shapely geometry."
                 )
 
             if geometry.is_empty:
@@ -678,9 +671,9 @@ if compat.HAS_PYGEOS:
         def query(self, geometry, predicate=None, sort=False):
             if predicate not in self.valid_query_predicates:
                 raise ValueError(
-                    "Got `predicate` = `{}`; ".format(predicate)
-                    + "`predicate` must be one of {}".format(
-                        self.valid_query_predicates
+                    (
+                        f"Got `predicate` = `{predicate}`; "
+                        + f"`predicate` must be one of {self.valid_query_predicates}"
                     )
                 )
 
@@ -689,10 +682,7 @@ if compat.HAS_PYGEOS:
 
             matches = self._tree.query(geometry=geometry, predicate=predicate)
 
-            if sort:
-                return np.sort(matches)
-
-            return matches
+            return np.sort(matches) if sort else matches
 
         @staticmethod
         def _as_geometry_array(geometry):
@@ -733,9 +723,7 @@ if compat.HAS_PYGEOS:
         def query_bulk(self, geometry, predicate=None, sort=False):
             if predicate not in self.valid_query_predicates:
                 raise ValueError(
-                    "Got `predicate` = `{}`, `predicate` must be one of {}".format(
-                        predicate, self.valid_query_predicates
-                    )
+                    f"Got `predicate` = `{predicate}`, `predicate` must be one of {self.valid_query_predicates}"
                 )
 
             geometry = self._as_geometry_array(geometry)
@@ -781,10 +769,7 @@ if compat.HAS_PYGEOS:
                 if return_distance:
                     distances = distances[mask]
 
-            if return_distance:
-                return indices, distances
-            else:
-                return indices
+            return (indices, distances) if return_distance else indices
 
         @doc(BaseSpatialIndex.intersection)
         def intersection(self, coordinates):
@@ -797,9 +782,7 @@ if compat.HAS_PYGEOS:
                 # this is a check that rtree does, we mimic it
                 # to ensure a useful failure message
                 raise TypeError(
-                    "Invalid coordinates, must be iterable in format "
-                    "(minx, miny, maxx, maxy) (for bounds) or (x, y) (for points). "
-                    "Got `coordinates` = {}.".format(coordinates)
+                    f"Invalid coordinates, must be iterable in format (minx, miny, maxx, maxy) (for bounds) or (x, y) (for points). Got `coordinates` = {coordinates}."
                 )
 
             # need to convert tuple of bounds to a geometry object
@@ -809,9 +792,7 @@ if compat.HAS_PYGEOS:
                 indexes = self._tree.query(pygeos.points(*coordinates))
             else:
                 raise TypeError(
-                    "Invalid coordinates, must be iterable in format "
-                    "(minx, miny, maxx, maxy) (for bounds) or (x, y) (for points). "
-                    "Got `coordinates` = {}.".format(coordinates)
+                    f"Invalid coordinates, must be iterable in format (minx, miny, maxx, maxy) (for bounds) or (x, y) (for points). Got `coordinates` = {coordinates}."
                 )
 
             return indexes

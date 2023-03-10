@@ -33,11 +33,7 @@ import matplotlib.pyplot as plt  # noqa
 try:  # skipif and importorskip do not work for decorators
     from matplotlib.testing.decorators import check_figures_equal
 
-    if Version(matplotlib.__version__) >= Version("3.3.0"):
-
-        MPL_DECORATORS = True
-    else:
-        MPL_DECORATORS = False
+    MPL_DECORATORS = Version(matplotlib.__version__) >= Version("3.3.0")
 except ImportError:
     MPL_DECORATORS = False
 
@@ -1237,10 +1233,8 @@ class TestMapclassifyPlotting:
             ]
         )
         assert all(
-            [
-                (z == expected).all(axis=1).any()
-                for z in ax.collections[0].get_facecolors()
-            ]
+            (z == expected).all(axis=1).any()
+            for z in ax.collections[0].get_facecolors()
         )
         labels = [
             "0.00, 0.10",
@@ -1290,10 +1284,8 @@ class TestMapclassifyPlotting:
             ]
         )
         assert all(
-            [
-                (z == expected).all(axis=1).any()
-                for z in ax2.collections[0].get_facecolors()
-            ]
+            (z == expected).all(axis=1).any()
+            for z in ax2.collections[0].get_facecolors()
         )
 
         labels = [
@@ -1328,10 +1320,8 @@ class TestMapclassifyPlotting:
             ]
         )
         assert all(
-            [
-                (z == expected).all(axis=1).any()
-                for z in ax3.collections[0].get_facecolors()
-            ]
+            (z == expected).all(axis=1).any()
+            for z in ax3.collections[0].get_facecolors()
         )
 
         legend = [t.get_text() for t in ax3.get_legend().get_texts()]
@@ -1843,8 +1833,7 @@ def _get_ax(fig, label):
     for ax in fig.axes:
         if ax.get_label() == label:
             return ax
-    else:
-        raise ValueError("no ax found with label {0}".format(label))
+    raise ValueError("no ax found with label {0}".format(label))
 
 
 def _get_colorbar_ax(fig):

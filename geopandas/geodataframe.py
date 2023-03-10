@@ -53,12 +53,10 @@ def _ensure_geometry(data, crs=None):
             data.crs = crs
         return data
     else:
-        if isinstance(data, Series):
-            out = from_shapely(np.asarray(data), crs=crs)
-            return GeoSeries(out, index=data.index, name=data.name)
-        else:
-            out = from_shapely(data, crs=crs)
-            return out
+        if not isinstance(data, Series):
+            return from_shapely(data, crs=crs)
+        out = from_shapely(np.asarray(data), crs=crs)
+        return GeoSeries(out, index=data.index, name=data.name)
 
 
 crs_mismatch_error = (
@@ -163,7 +161,7 @@ class GeoDataFrame(GeoPandasBase, DataFrame):
                     hasattr(self["geometry"].values, "crs")
                     and self["geometry"].values.crs
                     and crs
-                    and not self["geometry"].values.crs == crs
+                    and self["geometry"].values.crs != crs
                 ):
                     raise ValueError(crs_mismatch_error)
                 self["geometry"] = _ensure_geometry(self["geometry"].values, crs)
@@ -182,7 +180,7 @@ class GeoDataFrame(GeoPandasBase, DataFrame):
                 hasattr(geometry, "crs")
                 and geometry.crs
                 and crs
-                and not geometry.crs == crs
+                and geometry.crs != crs
             ):
                 raise ValueError(crs_mismatch_error)
 
@@ -215,8 +213,7 @@ class GeoDataFrame(GeoPandasBase, DataFrame):
                     f"but the active geometry column ('{self._geometry_column_name}') "
                     "is not present. "
                 )
-            geo_cols = list(self.columns[self.dtypes == "geometry"])
-            if len(geo_cols) > 0:
+            if geo_cols := list(self.columns[self.dtypes == "geometry"]):
                 msg += (
                     f"\nThere are columns with geometry data type ({geo_cols}), and "
                     "you can either set one as the active geometry with "
@@ -317,7 +314,7 @@ class GeoDataFrame(GeoPandasBase, DataFrame):
             try:
                 level = frame[col]
             except KeyError:
-                raise ValueError("Unknown column %s" % col)
+                raise ValueError(f"Unknown column {col}")
             except Exception:
                 raise
             if isinstance(level, DataFrame):
@@ -390,16 +387,15 @@ class GeoDataFrame(GeoPandasBase, DataFrame):
         --------
         GeoDataFrame.set_geometry : set the active geometry
         """
-        geometry_col = self.geometry.name
         if col in self.columns:
             raise ValueError(f"Column named {col} already exists")
-        else:
-            if not inplace:
-                return self.rename(columns={geometry_col: col}).set_geometry(
-                    col, inplace
-                )
-            self.rename(columns={geometry_col: col}, inplace=inplace)
-            self.set_geometry(col, inplace=inplace)
+        geometry_col = self.geometry.name
+        if not inplace:
+            return self.rename(columns={geometry_col: col}).set_geometry(
+                col, inplace
+            )
+        self.rename(columns={geometry_col: col}, inplace=inplace)
+        self.set_geometry(col, inplace=inplace)
 
     @property
     def crs(self):
@@ -446,13 +442,12 @@ class GeoDataFrame(GeoPandasBase, DataFrame):
                 "supported. Use GeoDataFrame.set_geometry to set the active "
                 "geometry column.",
             )
+        if hasattr(self.geometry.values, "crs"):
+            self.geometry.values.crs = value
+            self._crs = self.geometry.values.crs
         else:
-            if hasattr(self.geometry.values, "crs"):
-                self.geometry.values.crs = value
-                self._crs = self.geometry.values.crs
-            else:
                 # column called 'geometry' without geometry
-                self._crs = None if not value else CRS.from_user_input(value)
+            self._crs = CRS.from_user_input(value) if value else None
 
     def __setstate__(self, state):
         # overriding DataFrame method for compat with older pickles (CRS handling)
@@ -470,9 +465,8 @@ class GeoDataFrame(GeoPandasBase, DataFrame):
         # at GeoDataFrame level with '_crs' (and not 'crs'), so without propagating
         # to the GeoSeries/GeometryArray
         try:
-            if self.crs is not None:
-                if self.geometry.values.crs is None:
-                    self.crs = self.crs
+            if self.crs is not None and self.geometry.values.crs is None:
+                self.crs = self.crs
         except Exception:
             pass
 
@@ -636,7 +630,7 @@ class GeoDataFrame(GeoPandasBase, DataFrame):
             properties = feature["properties"]
             if properties is None:
                 properties = {}
-            row.update(properties)
+            row |= properties
             rows.append(row)
         return GeoDataFrame(rows, columns=columns, crs=crs)
 
@@ -710,7 +704,7 @@ class GeoDataFrame(GeoPandasBase, DataFrame):
         geopandas.read_postgis : read PostGIS database to GeoDataFrame
         """
 
-        df = geopandas.io.sql._read_postgis(
+        return geopandas.io.sql._read_postgis(
             sql,
             con,
             geom_col=geom_col,
@@ -721,8 +715,6 @@ class GeoDataFrame(GeoPandasBase, DataFrame):
             params=params,
             chunksize=chunksize,
         )
-
-        return df
 
     def to_json(self, na="null", show_bbox=False, drop_id=False, **kwargs):
         """
@@ -884,13 +876,9 @@ individually so that features may have different properties
                         k: v for k, v in zip(properties_cols, row) if not pd.isnull(v)
                     }
                 else:
-                    properties_items = {k: v for k, v in zip(properties_cols, row)}
+                    properties_items = dict(zip(properties_cols, row))
 
-                if drop_id:
-                    feature = {}
-                else:
-                    feature = {"id": str(ids[i])}
-
+                feature = {} if drop_id else {"id": str(ids[i])}
                 feature["type"] = "Feature"
                 feature["properties"] = properties_items
                 feature["geometry"] = mapping(geom) if geom else None
@@ -903,11 +891,7 @@ individually so that features may have different properties
         else:
             for fid, geom in zip(ids, geometries):
 
-                if drop_id:
-                    feature = {}
-                else:
-                    feature = {"id": str(fid)}
-
+                feature = {} if drop_id else {"id": str(fid)}
                 feature["type"] = "Feature"
                 feature["properties"] = {}
                 feature["geometry"] = mapping(geom) if geom else None
@@ -1224,10 +1208,7 @@ individually so that features may have different properties
         GeoDataFrame.to_crs : re-project to another CRS
 
         """
-        if not inplace:
-            df = self.copy()
-        else:
-            df = self
+        df = self if inplace else self.copy()
         df.geometry = df.geometry.set_crs(
             crs=crs, epsg=epsg, allow_override=allow_override, inplace=True
         )
@@ -1309,10 +1290,7 @@ individually so that features may have different properties
         --------
         GeoDataFrame.set_crs : assign CRS without re-projection
         """
-        if inplace:
-            df = self
-        else:
-            df = self.copy()
+        df = self if inplace else self.copy()
         geom = df.geometry.to_crs(crs=crs, epsg=epsg)
         df.geometry = geom
         df.crs = geom.crs
@@ -1422,13 +1400,14 @@ individually so that features may have different properties
 
         """
         result = DataFrame.merge(self, *args, **kwargs)
-        geo_col = self._geometry_column_name
-        if isinstance(result, DataFrame) and geo_col in result:
-            result.__class__ = GeoDataFrame
-            result.crs = self.crs
-            result._geometry_column_name = geo_col
-        elif isinstance(result, DataFrame) and geo_col not in result:
-            result.__class__ = DataFrame
+        if isinstance(result, DataFrame):
+            geo_col = self._geometry_column_name
+            if geo_col in result:
+                result.__class__ = GeoDataFrame
+                result.crs = self.crs
+                result._geometry_column_name = geo_col
+            else:
+                result.__class__ = DataFrame
         return result
 
     @doc(pd.DataFrame)

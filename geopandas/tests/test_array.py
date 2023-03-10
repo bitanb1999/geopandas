@@ -30,7 +30,9 @@ import geopandas._compat as compat
 import pytest
 
 triangle_no_missing = [
-    shapely.geometry.Polygon([(random.random(), random.random()) for i in range(3)])
+    shapely.geometry.Polygon(
+        [(random.random(), random.random()) for _ in range(3)]
+    )
     for _ in range(10)
 ]
 triangles = triangle_no_missing + [shapely.wkt.loads("POLYGON EMPTY"), None]
@@ -44,13 +46,16 @@ P = from_shapely(points)
 
 
 def equal_geometries(result, expected):
-    for r, e in zip(result, expected):
-        if r is None or e is None:
-            if not (r is None and e is None):
-                return False
-        elif not r.equals(e):
-            return False
-    return True
+    return not any(
+        r is None
+        and e is not None
+        or r is not None
+        and e is None
+        or r is not None
+        and e is not None
+        and not r.equals(e)
+        for r, e in zip(result, expected)
+    )
 
 
 def test_points():
@@ -143,9 +148,7 @@ def test_from_wkb():
     # TODO(pygeos) does not support empty strings, np.nan, or pd.NA
     missing_values = [None]
     if not compat.USE_PYGEOS:
-        missing_values.extend([b"", np.nan])
-        missing_values.append(pd.NA)
-
+        missing_values.extend([b"", np.nan, pd.NA])
     res = from_wkb(missing_values)
     np.testing.assert_array_equal(res, np.full(len(missing_values), None))
 
@@ -301,20 +304,21 @@ def test_predicates_vector_scalar(attr, args):
 )
 def test_predicates_vector_vector(attr, args):
     na_value = False
-    empty_value = True if attr == "disjoint" else False
+    empty_value = attr == "disjoint"
 
     A = (
         [shapely.geometry.Polygon(), None]
         + [
             shapely.geometry.Polygon(
-                [(random.random(), random.random()) for i in range(3)]
+                [(random.random(), random.random()) for _ in range(3)]
             )
             for _ in range(100)
         ]
-        + [None]
-    )
+    ) + [None]
     B = [
-        shapely.geometry.Polygon([(random.random(), random.random()) for i in range(3)])
+        shapely.geometry.Polygon(
+            [(random.random(), random.random()) for _ in range(3)]
+        )
         for _ in range(100)
     ] + [shapely.geometry.Polygon(), None, None]
 
@@ -378,7 +382,7 @@ def test_binary_geo_vector(attr):
     quads = [shapely.geometry.Polygon(), None]
     while len(quads) < 12:
         geom = shapely.geometry.Polygon(
-            [(random.random(), random.random()) for i in range(4)]
+            [(random.random(), random.random()) for _ in range(4)]
         )
         if geom.is_valid:
             quads.append(geom)
@@ -401,9 +405,9 @@ def test_binary_geo_scalar(attr):
     na_value = None
 
     quads = []
-    while len(quads) < 1:
+    while not quads:
         geom = shapely.geometry.Polygon(
-            [(random.random(), random.random()) for i in range(4)]
+            [(random.random(), random.random()) for _ in range(4)]
         )
         if geom.is_valid:
             quads.append(geom)
@@ -530,9 +534,9 @@ def test_binary_distance():
     # vector - vector
     result = P[: len(T)].distance(T[::-1])
     expected = [
-        getattr(p, attr)(t)
-        if not ((t is None or t.is_empty) or (p is None or p.is_empty))
-        else na_value
+        na_value
+        if ((t is None or t.is_empty) or (p is None or p.is_empty))
+        else getattr(p, attr)(t)
         for t, p in zip(triangles[::-1], points)
     ]
     np.testing.assert_allclose(result, expected)
@@ -541,7 +545,7 @@ def test_binary_distance():
     p = points[0]
     result = T.distance(p)
     expected = [
-        getattr(t, attr)(p) if not (t is None or t.is_empty) else na_value
+        na_value if (t is None or t.is_empty) else getattr(t, attr)(p)
         for t in triangles
     ]
     np.testing.assert_allclose(result, expected)
@@ -601,10 +605,8 @@ def test_binary_project(normalized):
 @pytest.mark.parametrize("join_style", [JOIN_STYLE.round, JOIN_STYLE.bevel])
 @pytest.mark.parametrize("resolution", [16, 25])
 def test_buffer(resolution, cap_style, join_style):
-    if compat.USE_PYGEOS:
-        # TODO(pygeos) need to further investigate why this test fails
-        if cap_style == 1 and join_style == 3:
-            pytest.skip("failing TODO")
+    if compat.USE_PYGEOS and cap_style == 1 and join_style == 3:
+        pytest.skip("failing TODO")
 
     na_value = None
     expected = [
@@ -628,7 +630,7 @@ def test_buffer(resolution, cap_style, join_style):
 def test_simplify():
     triangles = [
         shapely.geometry.Polygon(
-            [(random.random(), random.random()) for i in range(3)]
+            [(random.random(), random.random()) for _ in range(3)]
         ).buffer(10)
         for _ in range(10)
     ]
@@ -664,7 +666,9 @@ def test_unary_union():
 def test_affinity_methods(attr, arg):
     result = getattr(T, attr)(*arg)
     expected = [
-        getattr(shapely.affinity, attr)(t, *arg) if not (t is None or t.is_empty) else t
+        t
+        if (t is None or t.is_empty)
+        else getattr(shapely.affinity, attr)(t, *arg)
         for t in triangles
     ]
     assert equal_geometries(result, expected)
@@ -689,7 +693,8 @@ def test_coords_x_y():
 def test_bounds():
     result = T.bounds
     expected = [
-        t.bounds if not (t is None or t.is_empty) else [np.nan] * 4 for t in triangles
+        [np.nan] * 4 if (t is None or t.is_empty) else t.bounds
+        for t in triangles
     ]
     np.testing.assert_allclose(result, expected)
 
@@ -711,7 +716,10 @@ def test_bounds():
 def test_total_bounds():
     result = T.total_bounds
     bounds = np.array(
-        [t.bounds if not (t is None or t.is_empty) else [np.nan] * 4 for t in triangles]
+        [
+            [np.nan] * 4 if (t is None or t.is_empty) else t.bounds
+            for t in triangles
+        ]
     )
     expected = np.array(
         [

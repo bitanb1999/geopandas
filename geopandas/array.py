@@ -38,14 +38,12 @@ class GeometryDtype(ExtensionDtype):
     def construct_from_string(cls, string):
         if not isinstance(string, str):
             raise TypeError(
-                "'construct_from_string' expects a string, got {}".format(type(string))
+                f"'construct_from_string' expects a string, got {type(string)}"
             )
         elif string == cls.name:
             return cls()
         else:
-            raise TypeError(
-                "Cannot construct a '{}' from '{}'".format(cls.__name__, string)
-            )
+            raise TypeError(f"Cannot construct a '{cls.__name__}' from '{string}'")
 
     @classmethod
     def construct_array_type(cls):
@@ -61,12 +59,9 @@ def _check_crs(left, right, allow_none=False):
 
     If allow_none is True, empty CRS is treated as the same.
     """
-    if allow_none:
-        if not left.crs or not right.crs:
-            return True
-    if not left.crs == right.crs:
-        return False
-    return True
+    if allow_none and (not left.crs or not right.crs):
+        return True
+    return left.crs == right.crs
 
 
 def _crs_mismatch_warn(left, right, stacklevel=3):
@@ -108,20 +103,14 @@ def _geom_to_shapely(geom):
     """
     Convert internal representation (PyGEOS or Shapely) to external Shapely object.
     """
-    if not compat.USE_PYGEOS:
-        return geom
-    else:
-        return vectorized._pygeos_to_shapely(geom)
+    return vectorized._pygeos_to_shapely(geom) if compat.USE_PYGEOS else geom
 
 
 def _shapely_to_geom(geom):
     """
     Convert external Shapely object to internal representation (PyGEOS or Shapely).
     """
-    if not compat.USE_PYGEOS:
-        return geom
-    else:
-        return vectorized._shapely_to_pygeos(geom)
+    return vectorized._shapely_to_pygeos(geom) if compat.USE_PYGEOS else geom
 
 
 def _is_scalar_geometry(geom):
@@ -275,7 +264,7 @@ class GeometryArray(ExtensionArray):
                 "'data' should be array of geometry objects. Use from_shapely, "
                 "from_wkb, from_wkt functions to construct a GeometryArray."
             )
-        elif not data.ndim == 1:
+        elif data.ndim != 1:
             raise ValueError(
                 "'data' should be a 1-dimensional array of geometry objects."
             )
@@ -332,17 +321,13 @@ class GeometryArray(ExtensionArray):
     @crs.setter
     def crs(self, value):
         """Sets the value of the crs"""
-        self._crs = None if not value else CRS.from_user_input(value)
+        self._crs = CRS.from_user_input(value) if value else None
 
     def check_geographic_crs(self, stacklevel):
         """Check CRS and warn if the planar operation is done in a geographic CRS"""
         if self.crs and self.crs.is_geographic:
             warnings.warn(
-                "Geometry is in a geographic CRS. Results from '{}' are likely "
-                "incorrect. Use 'GeoSeries.to_crs()' to re-project geometries to a "
-                "projected CRS before this operation.\n".format(
-                    inspect.stack()[1].function
-                ),
+                f"Geometry is in a geographic CRS. Results from '{inspect.stack()[1].function}' are likely incorrect. Use 'GeoSeries.to_crs()' to re-project geometries to a projected CRS before this operation.\n",
                 UserWarning,
                 stacklevel=stacklevel,
             )
@@ -395,7 +380,7 @@ class GeometryArray(ExtensionArray):
                 self.data[key] = value
         else:
             raise TypeError(
-                "Value should be either a BaseGeometry or None, got %s" % str(value)
+                f"Value should be either a BaseGeometry or None, got {str(value)}"
             )
 
         # invalidate spatial index
@@ -865,50 +850,41 @@ class GeometryArray(ExtensionArray):
     @property
     def x(self):
         """Return the x location of point geometries in a GeoSeries"""
-        if (self.geom_type[~self.isna()] == "Point").all():
-            empty = self.is_empty
-            if empty.any():
-                nonempty = ~empty
-                coords = np.full_like(nonempty, dtype=float, fill_value=np.nan)
-                coords[nonempty] = vectorized.get_x(self.data[nonempty])
-                return coords
-            else:
-                return vectorized.get_x(self.data)
-        else:
-            message = "x attribute access only provided for Point geometries"
-            raise ValueError(message)
+        if not (self.geom_type[~self.isna()] == "Point").all():
+            raise ValueError("x attribute access only provided for Point geometries")
+        empty = self.is_empty
+        if not empty.any():
+            return vectorized.get_x(self.data)
+        nonempty = ~empty
+        coords = np.full_like(nonempty, dtype=float, fill_value=np.nan)
+        coords[nonempty] = vectorized.get_x(self.data[nonempty])
+        return coords
 
     @property
     def y(self):
         """Return the y location of point geometries in a GeoSeries"""
-        if (self.geom_type[~self.isna()] == "Point").all():
-            empty = self.is_empty
-            if empty.any():
-                nonempty = ~empty
-                coords = np.full_like(nonempty, dtype=float, fill_value=np.nan)
-                coords[nonempty] = vectorized.get_y(self.data[nonempty])
-                return coords
-            else:
-                return vectorized.get_y(self.data)
-        else:
-            message = "y attribute access only provided for Point geometries"
-            raise ValueError(message)
+        if not (self.geom_type[~self.isna()] == "Point").all():
+            raise ValueError("y attribute access only provided for Point geometries")
+        empty = self.is_empty
+        if not empty.any():
+            return vectorized.get_y(self.data)
+        nonempty = ~empty
+        coords = np.full_like(nonempty, dtype=float, fill_value=np.nan)
+        coords[nonempty] = vectorized.get_y(self.data[nonempty])
+        return coords
 
     @property
     def z(self):
         """Return the z location of point geometries in a GeoSeries"""
-        if (self.geom_type[~self.isna()] == "Point").all():
-            empty = self.is_empty
-            if empty.any():
-                nonempty = ~empty
-                coords = np.full_like(nonempty, dtype=float, fill_value=np.nan)
-                coords[nonempty] = vectorized.get_z(self.data[nonempty])
-                return coords
-            else:
-                return vectorized.get_z(self.data)
-        else:
-            message = "z attribute access only provided for Point geometries"
-            raise ValueError(message)
+        if not (self.geom_type[~self.isna()] == "Point").all():
+            raise ValueError("z attribute access only provided for Point geometries")
+        empty = self.is_empty
+        if not empty.any():
+            return vectorized.get_z(self.data)
+        nonempty = ~empty
+        coords = np.full_like(nonempty, dtype=float, fill_value=np.nan)
+        coords[nonempty] = vectorized.get_z(self.data[nonempty])
+        return coords
 
     @property
     def bounds(self):
@@ -973,7 +949,7 @@ class GeometryArray(ExtensionArray):
         """
         if not (_is_scalar_geometry(value) or value is None):
             raise TypeError(
-                "Value should be either a BaseGeometry or None, got %s" % str(value)
+                f"Value should be either a BaseGeometry or None, got {str(value)}"
             )
         # self.data[idx] = value
         value_arr = np.empty(1, dtype=object)
@@ -1045,10 +1021,7 @@ class GeometryArray(ExtensionArray):
             NumPy ndarray with 'dtype' for its dtype.
         """
         if isinstance(dtype, GeometryDtype):
-            if copy:
-                return self.copy()
-            else:
-                return self
+            return self.copy() if copy else self
         elif pd.api.types.is_string_dtype(dtype) and not pd.api.types.is_object_dtype(
             dtype
         ):
@@ -1260,37 +1233,32 @@ class GeometryArray(ExtensionArray):
             when ``boxed=False`` and :func:`str` is used when
             ``boxed=True``.
         """
-        if boxed:
-            import geopandas
+        if not boxed:
+            return repr
+        import geopandas
 
-            precision = geopandas.options.display_precision
-            if precision is None:
-                if self.crs:
-                    if self.crs.is_projected:
-                        precision = 3
-                    else:
-                        precision = 5
-                else:
-                    # fallback
-                    # dummy heuristic based on 10 first geometries that should
-                    # work in most cases
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore", category=RuntimeWarning)
-                        xmin, ymin, xmax, ymax = self[~self.isna()][:10].total_bounds
+        precision = geopandas.options.display_precision
+        if precision is None:
+            if self.crs:
+                precision = 3 if self.crs.is_projected else 5
+            else:
+                # fallback
+                # dummy heuristic based on 10 first geometries that should
+                # work in most cases
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    xmin, ymin, xmax, ymax = self[~self.isna()][:10].total_bounds
+                precision = (
+                    5
                     if (
                         (-180 <= xmin <= 180)
                         and (-180 <= xmax <= 180)
                         and (-90 <= ymin <= 90)
                         and (-90 <= ymax <= 90)
-                    ):
-                        # geographic coordinates
-                        precision = 5
-                    else:
-                        # typically projected coordinates
-                        # (in case of unit meter: mm precision)
-                        precision = 3
-            return lambda geom: shapely.wkt.dumps(geom, rounding_precision=precision)
-        return repr
+                    )
+                    else 3
+                )
+        return lambda geom: shapely.wkt.dumps(geom, rounding_precision=precision)
 
     @classmethod
     def _concat_same_type(cls, to_concat):
@@ -1311,7 +1279,7 @@ class GeometryArray(ExtensionArray):
     def _reduce(self, name, skipna=True, **kwargs):
         # including the base class version here (that raises by default)
         # because this was not yet defined in pandas 0.23
-        if name == "any" or name == "all":
+        if name in ["any", "all"]:
             # TODO(pygeos)
             return getattr(to_shapely(self), name)()
         raise TypeError(

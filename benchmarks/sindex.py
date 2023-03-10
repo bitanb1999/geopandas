@@ -26,7 +26,7 @@ def generate_test_df():
         "polygons": polygons[polygons.is_valid],
     }
     # ensure index is pre-generated
-    for data_type in data.keys():
+    for data_type in data:
         data[data_type].sindex.query(data[data_type].geometry.values.data[0])
     return data
 

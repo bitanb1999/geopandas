@@ -13,7 +13,7 @@ def _ensure_geometry_column(df):
     Helper function to ensure the geometry column is called 'geometry'.
     If another column with that name exists, it will be dropped.
     """
-    if not df._geometry_column_name == "geometry":
+    if df._geometry_column_name != "geometry":
         if "geometry" in df.columns:
             df.drop("geometry", axis=1, inplace=True)
         df.rename(
@@ -125,8 +125,7 @@ def _overlay_symmetric_diff(df1, df2):
     ]
     dfsym.drop(["geometry_1", "geometry_2"], axis=1, inplace=True)
     dfsym.reset_index(drop=True, inplace=True)
-    dfsym = GeoDataFrame(dfsym, geometry=geometry, crs=df1.crs)
-    return dfsym
+    return GeoDataFrame(dfsym, geometry=geometry, crs=df1.crs)
 
 
 def _overlay_union(df1, df2):

@@ -36,8 +36,8 @@ def df_epsg26918():
     # Center coordinates
     # -1683723.64 6689139.23
     return _create_df(
-        x=range(-1683723, -1683723 + 10, 1),
-        y=range(6689139, 6689139 + 10, 1),
+        x=range(-1683723, -1683723 + 10),
+        y=range(6689139, 6689139 + 10),
         crs="epsg:26918",
     )
 
@@ -159,7 +159,7 @@ class TestGeometryArrayCRS:
 
         self.geoms = [Point(0, 0), Point(1, 1)]
         self.polys = [
-            Polygon([(random.random(), random.random()) for i in range(3)])
+            Polygon([(random.random(), random.random()) for _ in range(3)])
             for _ in range(10)
         ]
         self.arr = from_shapely(self.polys, crs=27700)
@@ -510,7 +510,7 @@ class TestGeometryArrayCRS:
         arr = self.arr
         quads = []
         while len(quads) < 10:
-            geom = Polygon([(random.random(), random.random()) for i in range(4)])
+            geom = Polygon([(random.random(), random.random()) for _ in range(4)])
             if geom.is_valid:
                 quads.append(geom)
 
@@ -588,7 +588,7 @@ class TestGeometryArrayCRS:
         arr = from_shapely(self.geoms, crs=27700)
         df = GeoDataFrame({"col1": [0, 1]}, geometry=arr)
 
-        df["geometry"] = [g for g in df.geometry]
+        df["geometry"] = list(df.geometry)
         assert df.geometry.values.crs == self.osgb
 
         df2 = GeoDataFrame({"col1": [0, 1]}, geometry=arr)

@@ -177,13 +177,10 @@ def assert_geoseries_equal(
         if not isinstance(right, GeoSeries):
             right = GeoSeries(right, index=left.index)
 
-    assert left.index.equals(right.index), "index: %s != %s" % (left.index, right.index)
+    assert left.index.equals(right.index), f"index: {left.index} != {right.index}"
 
     if check_geom_type:
-        assert (left.type == right.type).all(), "type: %s != %s" % (
-            left.type,
-            right.type,
-        )
+        assert (left.type == right.type).all(), f"type: {left.type} != {right.type}"
 
     if normalize:
         left = GeoSeries(_vectorized.normalize(left.array.data))
@@ -200,20 +197,10 @@ def assert_geoseries_equal(
 def _truncated_string(geom):
     """Truncated WKT repr of geom"""
     s = str(geom)
-    if len(s) > 100:
-        return s[:100] + "..."
-    else:
-        return s
+    return s[:100] + "..." if len(s) > 100 else s
 
 
 def _check_equality(left, right, check_less_precise):
-    assert_error_message = (
-        "{0} out of {1} geometries are not {3}equal.\n"
-        "Indices where geometries are not {3}equal: {2} \n"
-        "The first not {3}equal geometry:\n"
-        "Left: {4}\n"
-        "Right: {5}\n"
-    )
     if check_less_precise:
         precise = "almost "
         equal = _geom_almost_equals_mask(left, right)
@@ -224,6 +211,13 @@ def _check_equality(left, right, check_less_precise):
     if not equal.all():
         unequal_left_geoms = left[~equal]
         unequal_right_geoms = right[~equal]
+        assert_error_message = (
+            "{0} out of {1} geometries are not {3}equal.\n"
+            "Indices where geometries are not {3}equal: {2} \n"
+            "The first not {3}equal geometry:\n"
+            "Left: {4}\n"
+            "Right: {5}\n"
+        )
         raise AssertionError(
             assert_error_message.format(
                 len(unequal_left_geoms),
@@ -287,12 +281,8 @@ def assert_geodataframe_equal(
         assert isinstance(left, GeoDataFrame)
         assert isinstance(left, type(right))
 
-        if check_crs:
-            # no crs can be either None or {}
-            if not left.crs and not right.crs:
-                pass
-            else:
-                assert left.crs == right.crs
+        if check_crs and (left.crs or right.crs):
+            assert left.crs == right.crs
     else:
         if not isinstance(left, GeoDataFrame):
             left = GeoDataFrame(left)

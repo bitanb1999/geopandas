@@ -28,20 +28,17 @@ def validate_boro_df(df, case_sensitive=False):
     # were properly loaded as MultiPolygons
     assert len(df) == 5
     columns = ("BoroCode", "BoroName", "Shape_Leng", "Shape_Area")
-    if case_sensitive:
-        for col in columns:
+    for col in columns:
+        if case_sensitive:
             assert col in df.columns
-    else:
-        for col in columns:
+        else:
             assert col.lower() in (dfcol.lower() for dfcol in df.columns)
     assert Series(df.geometry.type).dropna().eq("MultiPolygon").all()
 
 
 def get_srid(df):
     """Return srid from `df.crs`."""
-    if df.crs is not None:
-        return df.crs.to_epsg() or 0
-    return 0
+    return df.crs.to_epsg() or 0 if df.crs is not None else 0
 
 
 def create_spatialite(con, df):
@@ -102,8 +99,8 @@ def create_postgis(con, df, srid=None, geom_col="geom"):
     # > createdb test_geopandas
     # > psql -c "CREATE EXTENSION postgis" -d test_geopandas
     if srid is not None:
-        geom_schema = "geometry(MULTIPOLYGON, {})".format(srid)
-        geom_insert = "ST_SetSRID(ST_GeometryFromText(%s), {})".format(srid)
+        geom_schema = f"geometry(MULTIPOLYGON, {srid})"
+        geom_insert = f"ST_SetSRID(ST_GeometryFromText(%s), {srid})"
     else:
         geom_schema = "geometry"
         geom_insert = "ST_GeometryFromText(%s)"
